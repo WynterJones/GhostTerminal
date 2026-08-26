@@ -1,4 +1,4 @@
-# CommandPanel — Product Requirements Document
+# Ghost (née CommandPanel) — Product Requirements Document
 
 **Status:** v0.1 shipped · **Owner:** Wynter Jones · **Last updated:** 2026-08-26
 
@@ -85,7 +85,7 @@ whole product is the UX of appearing and disappearing.
 - Split panes, tmux integration, session restore after quit
 - Windows/Linux polish (macOS first; Tauri keeps the door open)
 - Global hotkey to summon (v0.2 candidate)
-- Custom app icon (still default Tauri icon)
+
 
 ## 7. Backlog / v0.2 ideas
 

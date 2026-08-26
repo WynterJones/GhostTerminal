@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CommandPanel",
+  "productName": "Ghost",
   "version": "0.1.0",
-  "identifier": "com.wynterjones.commandpanel",
+  "identifier": "com.wynterjones.ghost",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -15,7 +15,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "CommandPanel",
+        "title": "Ghost",
         "width": 1000,
         "height": 660,
         "minWidth": 56,

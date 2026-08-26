@@ -30,12 +30,25 @@ const THEME = {
   brightWhite: "#ffffff",
 };
 
+// mix two hex colors; t = weight of `a`
+function mix(a: string, b: string, t: number): string {
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+  return (
+    "#" +
+    pa
+      .map((v, i) => Math.round(v * t + pb[i] * (1 - t)).toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
 let nextId = 1;
 
 export class TermSession {
   id = nextId++;
   title = "shell";
   renamed = false;
+  color: string | null = null;
   lastOutput = 0;
   el: HTMLDivElement;
   term: Terminal;
@@ -97,6 +110,19 @@ export class TermSession {
       this.term.write(bytes);
       this.onActivity(this);
     });
+  }
+
+  // tab accent color tints this terminal's theme (bg, cursor, selection)
+  setColor(c: string | null): void {
+    this.color = c;
+    this.term.options.theme = c
+      ? {
+          ...THEME,
+          background: mix(c, THEME.background, 0.07),
+          cursor: c,
+          selectionBackground: mix(c, THEME.background, 0.35),
+        }
+      : { ...THEME };
   }
 
   fit(): void {

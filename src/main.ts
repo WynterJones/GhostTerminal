@@ -19,7 +19,6 @@ const tabsEl = $("tabs");
 const termsEl = $("terms");
 const miniEl = $("mini");
 const miniDot = $("mini-dot");
-const miniCount = $("mini-count");
 const paletteEl = $("palette");
 const paletteList = $("palette-list");
 const settingsEl = $("settings");
@@ -47,6 +46,12 @@ function renderTabs(): void {
     const name = document.createElement("span");
     name.className = "name";
     name.textContent = s.title;
+    if (s.color) {
+      const cd = document.createElement("span");
+      cd.className = "tab-color";
+      cd.style.background = s.color;
+      tab.appendChild(cd);
+    }
     const close = document.createElement("button");
     close.className = "close";
     close.textContent = "×";
@@ -63,12 +68,73 @@ function renderTabs(): void {
     };
     tab.oncontextmenu = (e) => {
       e.preventDefault();
-      startRename(tab, s);
+      openTabMenu(e, s, tab);
     };
     tabsEl.appendChild(tab);
   }
   updateMini();
 }
+
+// ---------- tab context menu ----------
+
+const tabMenu = $("tabmenu");
+const TAB_COLORS = ["#8ab4ff", "#34d399", "#fbbf24", "#f87171", "#c4a7e7", "#67e8f9", "#f9a8d4"];
+
+function closeTabMenu(): void {
+  tabMenu.hidden = true;
+}
+
+function openTabMenu(e: MouseEvent, s: TermSession, tab: HTMLElement): void {
+  tabMenu.innerHTML = "";
+
+  const rename = document.createElement("div");
+  rename.className = "menu-item";
+  rename.textContent = "Rename";
+  rename.onclick = () => {
+    closeTabMenu();
+    startRename(tab, s);
+  };
+
+  const sep = document.createElement("div");
+  sep.className = "menu-sep";
+
+  const label = document.createElement("div");
+  label.className = "menu-label";
+  label.textContent = "Color";
+
+  const swatches = document.createElement("div");
+  swatches.className = "swatches";
+  const none = document.createElement("button");
+  none.className = "swatch none" + (s.color ? "" : " on");
+  none.title = "Default";
+  none.onclick = () => {
+    s.setColor(null);
+    renderTabs();
+    closeTabMenu();
+  };
+  swatches.appendChild(none);
+  for (const c of TAB_COLORS) {
+    const b = document.createElement("button");
+    b.className = "swatch" + (s.color === c ? " on" : "");
+    b.style.background = c;
+    b.onclick = () => {
+      s.setColor(c);
+      renderTabs();
+      closeTabMenu();
+    };
+    swatches.appendChild(b);
+  }
+
+  tabMenu.append(rename, sep, label, swatches);
+  tabMenu.hidden = false;
+  const appRect = document.getElementById("app")!.getBoundingClientRect();
+  tabMenu.style.left = `${Math.min(e.clientX, appRect.width - tabMenu.offsetWidth - 8)}px`;
+  tabMenu.style.top = `${Math.min(e.clientY, appRect.height - tabMenu.offsetHeight - 8)}px`;
+}
+
+document.addEventListener("mousedown", (e) => {
+  if (!tabMenu.hidden && !tabMenu.contains(e.target as Node)) closeTabMenu();
+});
 
 function startRename(tab: HTMLElement, s: TermSession): void {
   const name = tab.querySelector(".name") as HTMLElement;
@@ -145,8 +211,8 @@ void listen<number>("pty-exit", (e) => closeTab(e.payload, true));
 // ---------- mini status ----------
 
 function updateMini(): void {
-  miniCount.textContent = String(sessions.length);
   const busy = sessions.some((s) => Date.now() - s.lastOutput < 3000);
+  miniDot.hidden = !busy;
   miniDot.classList.toggle("busy", busy);
 }
 setInterval(updateMini, 1500);
@@ -492,7 +558,8 @@ document.addEventListener(
   "keydown",
   (e) => {
     if (!e.metaKey) {
-      if (e.key === "Escape" && !paletteEl.hidden) closePalette();
+      if (e.key === "Escape" && !tabMenu.hidden) closeTabMenu();
+      else if (e.key === "Escape" && !paletteEl.hidden) closePalette();
       else if (e.key === "Escape" && !settingsEl.hidden) toggleSettings();
       return;
     }

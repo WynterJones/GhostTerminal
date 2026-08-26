@@ -104,7 +104,60 @@ body:not([data-mode="mini"]) #mini { display: none; }
   outline: none;
 }
 
+.tab .tab-color {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .spacer { flex: 1; height: 100%; }
+
+/* ---------- tab context menu ---------- */
+
+#tabmenu {
+  position: absolute; z-index: 50;
+  min-width: 150px;
+  background: var(--bg-solid);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  animation: pop 120ms ease;
+}
+#tabmenu[hidden] { display: none; }
+
+.menu-item {
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.menu-item:hover { background: var(--surface-hover); }
+
+.menu-sep { height: 1px; background: var(--border); margin: 4px 6px; }
+
+.menu-label {
+  padding: 4px 10px 2px;
+  font-size: 10px; font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+.swatches { display: flex; gap: 6px; padding: 5px 10px 7px; }
+.swatch {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.swatch.on { border-color: #fff; }
+.swatch:hover { transform: scale(1.15); }
+.swatch.none {
+  background: transparent;
+  border: 1.5px dashed var(--text-dim);
+}
+.swatch.none.on { border-color: #fff; }
 
 #actions { display: flex; gap: 2px; }
 
@@ -388,17 +441,18 @@ body:not([data-mode="mini"]) #mini { display: none; }
 #mini:hover { border-color: rgba(255,255,255,0.3); }
 
 #mini-icon {
-  color: #fff;
-  font-size: 20px;
-  font-family: var(--mono);
-  font-weight: 700;
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 #mini-dot {
   position: absolute; top: 7px; right: 7px;
   width: 7px; height: 7px; border-radius: 50%;
-  background: var(--green);
 }
+#mini-dot[hidden] { display: none; }
 #mini-dot.busy {
   background: var(--amber);
   animation: pulse 1.2s ease infinite;
@@ -406,12 +460,4 @@ body:not([data-mode="mini"]) #mini { display: none; }
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
-}
-
-#mini-count {
-  position: absolute; bottom: 5px; right: 7px;
-  color: rgba(255,255,255,0.65);
-  font-size: 9px;
-  font-family: var(--mono);
-  font-weight: 600;
 }

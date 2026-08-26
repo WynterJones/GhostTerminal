@@ -122,7 +122,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             {
                 use tauri::menu::{MenuBuilder, SubmenuBuilder};
-                let app_menu = SubmenuBuilder::new(app, "CommandPanel")
+                let app_menu = SubmenuBuilder::new(app, "Ghost")
                     .about(None)
                     .separator()
                     .services()

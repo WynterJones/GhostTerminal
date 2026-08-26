@@ -1,6 +1,6 @@
 <div align="center">
 
-# ❯ CommandPanel
+<img src="assets/logo.png" alt="Ghost" width="420" />
 
 **A minimal, always-on-top terminal that gets out of your way.**
 
@@ -19,11 +19,11 @@ terminal app hogging your screen.
 
 ## What it does
 
-CommandPanel is a dark, frameless terminal panel with three states:
+Ghost is a dark, frameless terminal panel with three states:
 
 | State | What you see |
 |---|---|
-| **Mini** | A tiny black box pinned to a screen edge — `❯` icon, status dot, terminal count. Always on top. |
+| **Mini** | A tiny black box pinned to a screen edge with the Ghost icon (a dot pulses while output streams). Always on top. |
 | **Quick view** | A compact terminal panel for firing off a command. |
 | **Full popup** | A large terminal for real sessions. |
 
@@ -34,10 +34,10 @@ you want it to stay put.
 ## Features
 
 - 🖥️ **Real terminals** — native PTY per tab (login shell, your full PATH), xterm.js with WebGL rendering, 24-bit color, Unicode 11, clickable links
-- 🗂️ **Tabs** — `⌘T` new, `⌘W` close, `⌘1–9` switch, **right-click to rename**, auto-titles from the shell, activity dots on busy background tabs
+- 🗂️ **Tabs** — `⌘T` new, `⌘W` close, `⌘1–9` switch, **right-click to rename or color-tag** (the color tints that tab's terminal theme), auto-titles from the shell, activity dots on busy background tabs
 - ⚡ **Quick commands** — `⌘K` palette with your AI CLIs (`claude`, `codex`, `gemini` by default, fully editable). Click to run; `⌘`-click to run in a new tab
 - 🖼️ **Drag & drop** — drop images, files, or folders onto the terminal and the shell-quoted path lands at your cursor (ideal for handing screenshots to Claude Code)
-- 📌 **Mini mode** — draggable to any screen edge, snaps and remembers its spot, shows live status (amber pulse = output streaming) and open-terminal count. **Hover it to peek** at a quick view without stealing focus (click or type to keep it); **click it** to open the terminal centered on screen
+- 📌 **Mini mode** — draggable to any screen edge, snaps and remembers its spot, pulses while output streams. **Hover it to peek** at a quick view without stealing focus (click or type to keep it); **click it** to open the terminal centered on screen
 - ⚙️ **Settings** — a clean centered modal: auto-hide toggle + delay, hover-peek toggle, default expand view (quick/full), always-on-top, font size, quick-command editor. Everything persists
 - 🌘 **Dark, minimal design** — no title bar, rounded transparent window, 100 ms fade/scale animations
 
@@ -52,7 +52,7 @@ you want it to stay put.
 | `⌘,` | Settings |
 | `⌘+` / `⌘−` | Font size |
 | `⌘C` / `⌘V` | Copy selection / paste |
-| Right-click tab | Rename |
+| Right-click tab | Rename · tab color |
 | `Esc` | Close palette / settings |
 
 ## Getting started
@@ -60,8 +60,8 @@ you want it to stay put.
 **Prereqs:** Rust (stable), Node 18+, and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS.
 
 ```bash
-git clone https://github.com/WynterJones/CommandPanel.git
-cd CommandPanel
+git clone https://github.com/WynterJones/GhostTerminal.git
+cd GhostTerminal
 npm install
 npm run tauri dev      # develop
 npm run tauri build    # produce the .app / installer
@@ -91,7 +91,6 @@ UTF-8 chunk boundaries itself.
 
 - Global summon hotkey
 - Session restore across restarts
-- Custom app icon
 - Windows / Linux polish
 
 See [`_PLANS/PRD.md`](_PLANS/PRD.md) for the full product doc.
