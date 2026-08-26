@@ -39,6 +39,7 @@ you want it to stay put.
 - 🖼️ **Drag & drop** — drop images, files, or folders onto the terminal and the shell-quoted path lands at your cursor (ideal for handing screenshots to Claude Code)
 - 📌 **Mini mode** — draggable to any screen edge, snaps and remembers its spot, pulses while output streams. **Hover it to peek** at a quick view without stealing focus (click or type to keep it); **click it** to open the terminal centered on screen
 - ⚙️ **Settings** — a clean centered modal: auto-hide toggle + delay, hover-peek toggle, default expand view (quick/full), always-on-top, font size, quick-command editor. Everything persists
+- 🔄 **Auto-updates** — signed & notarized builds; Settings → Check for updates downloads, installs, and restarts in place
 - 🌘 **Dark, minimal design** — no title bar, rounded transparent window, 100 ms fade/scale animations
 
 ## Keyboard shortcuts
@@ -55,7 +56,11 @@ you want it to stay put.
 | Right-click tab | Rename · tab color |
 | `Esc` | Close palette / settings |
 
-## Getting started
+## Install
+
+Grab the latest signed `.dmg` from [Releases](https://github.com/WynterJones/GhostTerminal/releases/latest) (Apple Silicon). Ghost keeps itself current via Settings → Check for updates.
+
+## Building from source
 
 **Prereqs:** Rust (stable), Node 18+, and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS.
 

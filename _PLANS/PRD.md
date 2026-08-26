@@ -94,7 +94,12 @@ whole product is the UX of appearing and disappearing.
 - Session persistence across restarts
 - Per-tab working directory chooser + "open in current Finder folder"
 - Custom icon + notch-style top-edge docking
-- Auto-update via tauri-plugin-updater
+
+### Distribution (shipped)
+- [x] Signed (Developer ID) + notarized macOS build
+- [x] GitHub Releases with updater artifacts (`latest.json`, signed `.app.tar.gz`)
+- [x] In-app updates: Settings → Check for updates → download, install, relaunch
+      (tauri-plugin-updater + tauri-plugin-process)
 
 ## 8. Technical notes
 

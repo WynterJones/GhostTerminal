@@ -1,3 +1,7 @@
+import { getVersion } from "@tauri-apps/api/app";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+
 export type QuickCmd = { label: string; cmd: string };
 
 export type Settings = {
@@ -257,4 +261,48 @@ export function renderSettings(body: HTMLElement, hooks: Hooks): void {
     (list.lastElementChild?.firstElementChild as HTMLInputElement)?.focus();
   };
   cmds.appendChild(add);
+
+  // Updates
+  const up = section("Updates");
+  const ver = el("span", "set-val", "…");
+  void getVersion().then((v) => (ver.textContent = `v${v}`));
+  row(up, "Version", ver);
+
+  const upRow = el("div", "set-row");
+  const status = el("div", "set-label");
+  const statusText = el("span", "set-hint", "");
+  status.appendChild(statusText);
+  const btn = el("button", "update-btn", "Check for updates");
+  upRow.append(status, btn);
+  up.appendChild(upRow);
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try {
+      statusText.textContent = "Checking…";
+      const update = await check();
+      if (!update) {
+        statusText.textContent = "You're up to date.";
+        btn.disabled = false;
+        return;
+      }
+      statusText.textContent = `v${update.version} available`;
+      btn.textContent = "Downloading…";
+      let total = 0;
+      let got = 0;
+      await update.downloadAndInstall((ev) => {
+        if (ev.event === "Started") total = ev.data.contentLength ?? 0;
+        else if (ev.event === "Progress") {
+          got += ev.data.chunkLength;
+          if (total) btn.textContent = `Downloading… ${Math.round((got / total) * 100)}%`;
+        } else if (ev.event === "Finished") btn.textContent = "Installing…";
+      });
+      statusText.textContent = "Restarting…";
+      await relaunch();
+    } catch (err) {
+      statusText.textContent = `Update failed: ${err}`;
+      btn.textContent = "Check for updates";
+      btn.disabled = false;
+    }
+  };
 }

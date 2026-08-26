@@ -407,6 +407,20 @@ body:not([data-mode="mini"]) #mini { display: none; }
 }
 #qc-add:hover { color: var(--text); border-color: var(--text-dim); }
 
+.update-btn {
+  border: 1px solid var(--border);
+  background: var(--surface-hover);
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font);
+  border-radius: 7px;
+  padding: 5px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.update-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.update-btn:disabled { opacity: 0.6; cursor: default; }
+
 /* ---------- drop overlay ---------- */
 
 #drop {
