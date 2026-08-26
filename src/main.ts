@@ -5,6 +5,7 @@ import {
   LogicalPosition,
   LogicalSize,
   currentMonitor,
+  cursorPosition,
   getCurrentWindow,
 } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -192,8 +193,16 @@ function snapToEdge(wa: Rect, p: { x: number; y: number }): { x: number; y: numb
   return d.pos;
 }
 
+// deliberate expansion: centered in the work area
 function expandTarget(wa: Rect, s: { w: number; h: number }): { x: number; y: number } {
-  // anchor near the mini box, growing toward screen center; clamp inside work area
+  return {
+    x: Math.round(wa.x + (wa.w - s.w) / 2),
+    y: Math.round(wa.y + (wa.h - s.h) / 2),
+  };
+}
+
+// hover peek: anchored next to the mini box so it appears under the cursor
+function anchorTarget(wa: Rect, s: { w: number; h: number }): { x: number; y: number } {
   const anchor = settings.miniPos ?? { x: wa.x + wa.w - MINI - MARGIN, y: wa.y + wa.h / 2 - MINI / 2 };
   const cx = anchor.x + MINI / 2 <= wa.x + wa.w / 2 ? anchor.x : anchor.x + MINI - s.w;
   const cy = anchor.y + MINI / 2 <= wa.y + wa.h / 2 ? anchor.y : anchor.y + MINI - s.h;
@@ -203,16 +212,21 @@ function expandTarget(wa: Rect, s: { w: number; h: number }): { x: number; y: nu
   };
 }
 
-async function setMode(next: Mode): Promise<void> {
+let peek = false;
+
+async function setMode(next: Mode, opts?: { peek?: boolean }): Promise<void> {
   if (switching || next === mode) return;
   switching = true;
-  disarmHide();
+  bump();
   document.body.classList.add("switching");
   await sleep(110);
 
   const wa = await workArea();
   ignoreMove = true;
   if (next === "mini") {
+    peek = false;
+    settingsEl.hidden = true;
+    paletteEl.hidden = true;
     const p = miniTarget(wa);
     settings.miniPos = p;
     save();
@@ -221,13 +235,14 @@ async function setMode(next: Mode): Promise<void> {
     await win.setPosition(new LogicalPosition(p.x, p.y));
     await win.setAlwaysOnTop(true);
   } else {
+    peek = !!opts?.peek;
     const size = next === "full" ? settings.fullSize : settings.quickSize;
-    const p = expandTarget(wa, { w: size.w, h: size.h });
+    const p = peek ? anchorTarget(wa, size) : expandTarget(wa, size);
     await win.setSize(new LogicalSize(size.w, size.h));
     await win.setPosition(new LogicalPosition(p.x, p.y));
     await win.setResizable(true);
-    await win.setAlwaysOnTop(settings.alwaysOnTop);
-    await win.setFocus();
+    await win.setAlwaysOnTop(peek ? true : settings.alwaysOnTop);
+    if (!peek) await win.setFocus();
   }
 
   mode = next;
@@ -239,9 +254,8 @@ async function setMode(next: Mode): Promise<void> {
   switching = false;
 
   if (next !== "mini") {
-    const s = active();
-    s?.fit();
-    s?.focus();
+    active()?.fit();
+    if (!peek) active()?.focus();
   }
 }
 
@@ -285,10 +299,19 @@ void win.onMoved(() => {
   }, 250);
 });
 
-// mini box: click opens, drag moves
+// mini box: click opens centered, hover peeks, drag moves
 let downAt: { x: number; y: number } | null = null;
 let dragged = false;
+let hoverTimer: number | undefined;
+
+miniEl.addEventListener("mouseenter", () => {
+  if (!settings.hoverPeek) return;
+  clearTimeout(hoverTimer);
+  hoverTimer = window.setTimeout(() => void setMode("quick", { peek: true }), 250);
+});
+miniEl.addEventListener("mouseleave", () => clearTimeout(hoverTimer));
 miniEl.addEventListener("mousedown", (e) => {
+  clearTimeout(hoverTimer);
   downAt = { x: e.screenX, y: e.screenY };
   dragged = false;
 });
@@ -300,55 +323,74 @@ miniEl.addEventListener("mousemove", (e) => {
   }
 });
 miniEl.addEventListener("mouseup", () => {
+  clearTimeout(hoverTimer);
   if (downAt && !dragged) void setMode(settings.defaultView);
   downAt = null;
 });
 
 // ---------- auto-hide ----------
 
-let mouseInside = false;
-let focused = document.hasFocus();
 let lastActivity = Date.now() + 3000; // grace period after launch
 const bump = () => (lastActivity = Date.now());
 
-document.addEventListener("mousemove", () => {
-  mouseInside = true;
-  bump();
-});
-document.addEventListener("mousedown", bump);
-document.addEventListener("keydown", bump, true);
-document.documentElement.addEventListener("mouseenter", () => {
-  mouseInside = true;
-  bump();
-});
-document.documentElement.addEventListener("mouseleave", () => (mouseInside = false));
-void win.onFocusChanged(({ payload }) => {
-  focused = payload;
-  if (payload) bump();
-});
-
-let hideInterval: number | undefined;
-function disarmHide(): void {
-  bump();
+// clicking or typing in a hover-peeked window makes it a normal sticky window
+function promotePeek(): void {
+  if (!peek) return;
+  peek = false;
+  void win.setAlwaysOnTop(settings.alwaysOnTop);
+  void win.setFocus();
 }
-function startHideLoop(): void {
-  clearInterval(hideInterval);
-  hideInterval = window.setInterval(() => {
-    if (
-      mode === "mini" ||
-      switching ||
-      settings.pinned ||
+
+document.addEventListener("mousemove", bump);
+document.addEventListener("mousedown", () => {
+  bump();
+  promotePeek();
+});
+document.addEventListener(
+  "keydown",
+  () => {
+    bump();
+    promotePeek();
+  },
+  true,
+);
+
+// Poll the OS cursor position instead of relying on mouseleave/focus events,
+// which are unreliable in WKWebView.
+async function mouseIsOver(): Promise<boolean> {
+  const [c, p, s] = await Promise.all([cursorPosition(), win.outerPosition(), win.outerSize()]);
+  return c.x >= p.x && c.x <= p.x + s.width && c.y >= p.y && c.y <= p.y + s.height;
+}
+
+let ticking = false;
+setInterval(() => {
+  if (ticking || mode === "mini" || switching) return;
+  if (
+    !peek &&
+    (settings.pinned ||
       !settings.autoHide ||
       !settingsEl.hidden ||
       !paletteEl.hidden ||
-      !dropEl.hidden
-    )
-      return;
-    const away = !mouseInside || !focused;
-    if (away && Date.now() - lastActivity > settings.hideDelay) void setMode("mini");
-  }, 400);
-}
-startHideLoop();
+      !dropEl.hidden)
+  )
+    return;
+  ticking = true;
+  void (async () => {
+    try {
+      if (await mouseIsOver()) bump();
+      else if (Date.now() - lastActivity > (peek ? 600 : settings.hideDelay)) {
+        await setMode("mini");
+      }
+    } catch {
+      // cursor position unavailable: fall back to focus heuristic
+      if (!document.hasFocus() && Date.now() - lastActivity > settings.hideDelay) {
+        await setMode("mini");
+      }
+    } finally {
+      ticking = false;
+    }
+  })();
+}, 400);
 
 // closing the window collapses to the mini box instead of quitting
 void win.onCloseRequested((e) => {
@@ -415,7 +457,7 @@ function refreshPin(): void {
 
 function toggleSettings(): void {
   if (settingsEl.hidden) {
-    renderSettings(settingsEl, {
+    renderSettings($("settings-body"), {
       onFontSize: (n) => {
         for (const s of sessions) s.term.options.fontSize = n;
         active()?.fit();
@@ -428,6 +470,10 @@ function toggleSettings(): void {
     active()?.focus();
   }
 }
+settingsEl.addEventListener("mousedown", (e) => {
+  if (e.target === settingsEl) toggleSettings();
+});
+$("set-close").onclick = toggleSettings;
 
 $("newtab").onclick = () => void newTab();
 $("cmdbtn").onclick = () => (paletteEl.hidden ? openPalette() : closePalette());
@@ -451,6 +497,14 @@ document.addEventListener(
       return;
     }
     const k = e.key.toLowerCase();
+    if (mode === "mini") {
+      // shortcuts can't act on a hidden panel; expand first
+      if (k === "t" || k === "k" || k === ",") {
+        e.preventDefault();
+        void setMode(settings.defaultView);
+      }
+      return;
+    }
     if (k === "t") {
       e.preventDefault();
       void newTab();

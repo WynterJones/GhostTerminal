@@ -4,6 +4,7 @@ export type Settings = {
   pinned: boolean;
   autoHide: boolean;
   hideDelay: number; // ms
+  hoverPeek: boolean;
   defaultView: "quick" | "full";
   alwaysOnTop: boolean;
   fontSize: number;
@@ -17,6 +18,7 @@ const DEFAULTS: Settings = {
   pinned: false,
   autoHide: true,
   hideDelay: 1500,
+  hoverPeek: true,
   defaultView: "quick",
   alwaysOnTop: true,
   fontSize: 13,
@@ -51,107 +53,189 @@ type Hooks = {
   onAlwaysOnTop: (b: boolean) => void;
 };
 
-export function renderSettings(el: HTMLElement, hooks: Hooks): void {
-  el.innerHTML = "";
+// ---------- controls ----------
+
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  cls?: string,
+  text?: string,
+): HTMLElementTagNameMap[K] {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function toggle(value: boolean, onChange: (b: boolean) => void): HTMLElement {
+  const wrap = el("label", "switch");
+  const input = el("input");
+  input.type = "checkbox";
+  input.checked = value;
+  input.onchange = () => {
+    onChange(input.checked);
+    save();
+  };
+  wrap.append(input, el("span", "knob"));
+  return wrap;
+}
+
+function segmented(
+  options: [string, string][],
+  value: string,
+  onChange: (v: string) => void,
+): HTMLElement {
+  const seg = el("div", "seg");
+  const btns: HTMLButtonElement[] = [];
+  for (const [v, label] of options) {
+    const b = el("button", v === value ? "on" : "", label);
+    b.onclick = () => {
+      btns.forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+      onChange(v);
+      save();
+    };
+    btns.push(b);
+    seg.appendChild(b);
+  }
+  return seg;
+}
+
+function stepper(
+  value: number,
+  min: number,
+  max: number,
+  onChange: (n: number) => void,
+): HTMLElement {
+  const wrap = el("div", "stepper");
+  const minus = el("button", "", "−");
+  const val = el("span", "", String(value));
+  const plus = el("button", "", "+");
+  let n = value;
+  const set = (next: number) => {
+    n = Math.min(max, Math.max(min, next));
+    val.textContent = String(n);
+    onChange(n);
+    save();
+  };
+  minus.onclick = () => set(n - 1);
+  plus.onclick = () => set(n + 1);
+  wrap.append(minus, val, plus);
+  return wrap;
+}
+
+// ---------- panel ----------
+
+export function renderSettings(body: HTMLElement, hooks: Hooks): void {
+  body.innerHTML = "";
 
   const section = (title: string) => {
-    const h = document.createElement("h3");
-    h.textContent = title;
-    el.appendChild(h);
+    const card = el("div", "set-card");
+    const h = el("h3", "", title);
+    body.append(h, card);
+    return card;
   };
 
-  const row = (label: string, control: HTMLElement, extra?: HTMLElement) => {
-    const div = document.createElement("div");
-    div.className = "set-row";
-    const lab = document.createElement("label");
-    lab.textContent = label;
-    div.append(lab, control);
-    if (extra) div.appendChild(extra);
-    el.appendChild(div);
+  const row = (card: HTMLElement, label: string, control: HTMLElement, hint?: string) => {
+    const div = el("div", "set-row");
+    const left = el("div", "set-label");
+    left.appendChild(el("span", "", label));
+    if (hint) left.appendChild(el("span", "set-hint", hint));
+    div.append(left, control);
+    card.appendChild(div);
     return div;
   };
 
-  const checkbox = (value: boolean, onChange: (b: boolean) => void) => {
-    const c = document.createElement("input");
-    c.type = "checkbox";
-    c.checked = value;
-    c.onchange = () => { onChange(c.checked); save(); };
-    return c;
+  // Behavior
+  const behavior = section("Behavior");
+
+  const delayRow = () => {
+    const wrap = el("div", "slider-wrap");
+    const valEl = el("span", "set-val", `${(settings.hideDelay / 1000).toFixed(1)}s`);
+    const range = el("input");
+    range.type = "range";
+    range.min = "500";
+    range.max = "10000";
+    range.step = "250";
+    range.value = String(settings.hideDelay);
+    range.oninput = () => {
+      settings.hideDelay = Number(range.value);
+      valEl.textContent = `${(settings.hideDelay / 1000).toFixed(1)}s`;
+      save();
+    };
+    wrap.append(range, valEl);
+    return wrap;
   };
 
-  section("Behavior");
+  row(
+    behavior,
+    "Auto-hide",
+    toggle(settings.autoHide, (b) => (settings.autoHide = b)),
+    "Collapse to icon when mouse is away",
+  );
+  row(behavior, "Hide delay", delayRow());
+  row(
+    behavior,
+    "Peek on hover",
+    toggle(settings.hoverPeek, (b) => (settings.hoverPeek = b)),
+    "Hovering the icon shows a quick view",
+  );
+  row(
+    behavior,
+    "Open from icon as",
+    segmented(
+      [
+        ["quick", "Quick"],
+        ["full", "Large"],
+      ],
+      settings.defaultView,
+      (v) => (settings.defaultView = v as "quick" | "full"),
+    ),
+  );
+  row(
+    behavior,
+    "Always on top",
+    toggle(settings.alwaysOnTop, (b) => {
+      settings.alwaysOnTop = b;
+      hooks.onAlwaysOnTop(b);
+    }),
+  );
 
-  row("Auto-hide when mouse away", checkbox(settings.autoHide, (b) => (settings.autoHide = b)));
+  // Terminal
+  const term = section("Terminal");
+  row(
+    term,
+    "Font size",
+    stepper(settings.fontSize, 9, 24, (n) => {
+      settings.fontSize = n;
+      hooks.onFontSize(n);
+    }),
+    "⌘+ / ⌘− also works",
+  );
 
-  const delayVal = document.createElement("span");
-  delayVal.className = "set-val";
-  delayVal.textContent = `${(settings.hideDelay / 1000).toFixed(1)}s`;
-  const delay = document.createElement("input");
-  delay.type = "range";
-  delay.min = "500";
-  delay.max = "10000";
-  delay.step = "250";
-  delay.value = String(settings.hideDelay);
-  delay.oninput = () => {
-    settings.hideDelay = Number(delay.value);
-    delayVal.textContent = `${(settings.hideDelay / 1000).toFixed(1)}s`;
-    save();
-  };
-  row("Hide delay", delay, delayVal);
-
-  const view = document.createElement("select");
-  for (const [v, t] of [["quick", "Quick view"], ["full", "Large popup"]]) {
-    const o = document.createElement("option");
-    o.value = v;
-    o.textContent = t;
-    view.appendChild(o);
-  }
-  view.value = settings.defaultView;
-  view.onchange = () => { settings.defaultView = view.value as "quick" | "full"; save(); };
-  row("Open from icon as", view);
-
-  row("Always on top", checkbox(settings.alwaysOnTop, (b) => {
-    settings.alwaysOnTop = b;
-    hooks.onAlwaysOnTop(b);
-  }));
-
-  section("Terminal");
-
-  const font = document.createElement("input");
-  font.type = "number";
-  font.min = "9";
-  font.max = "24";
-  font.value = String(settings.fontSize);
-  font.onchange = () => {
-    settings.fontSize = Math.min(24, Math.max(9, Number(font.value) || 13));
-    font.value = String(settings.fontSize);
-    hooks.onFontSize(settings.fontSize);
-    save();
-  };
-  row("Font size", font);
-
-  section("Quick commands");
-
-  const list = document.createElement("div");
-  el.appendChild(list);
+  // Quick commands
+  const cmds = section("Quick commands");
+  const list = el("div");
+  cmds.appendChild(list);
 
   const renderCmds = () => {
     list.innerHTML = "";
     settings.quickCmds.forEach((qc, i) => {
-      const r = document.createElement("div");
-      r.className = "qc-row";
-      const label = document.createElement("input");
-      label.className = "qc-label";
+      const r = el("div", "qc-row");
+      const label = el("input", "qc-label");
       label.value = qc.label;
       label.placeholder = "Label";
-      label.onchange = () => { qc.label = label.value; save(); };
-      const cmd = document.createElement("input");
-      cmd.className = "qc-cmd";
+      label.onchange = () => {
+        qc.label = label.value;
+        save();
+      };
+      const cmd = el("input", "qc-cmd");
       cmd.value = qc.cmd;
       cmd.placeholder = "command";
-      cmd.onchange = () => { qc.cmd = cmd.value; save(); };
-      const del = document.createElement("button");
-      del.textContent = "×";
+      cmd.onchange = () => {
+        qc.cmd = cmd.value;
+        save();
+      };
+      const del = el("button", "qc-del", "×");
       del.title = "Remove";
       del.onclick = () => {
         settings.quickCmds.splice(i, 1);
@@ -164,13 +248,13 @@ export function renderSettings(el: HTMLElement, hooks: Hooks): void {
   };
   renderCmds();
 
-  const add = document.createElement("button");
+  const add = el("button", "", "+ Add command");
   add.id = "qc-add";
-  add.textContent = "+ Add command";
   add.onclick = () => {
     settings.quickCmds.push({ label: "", cmd: "" });
     save();
     renderCmds();
+    (list.lastElementChild?.firstElementChild as HTMLInputElement)?.focus();
   };
-  el.appendChild(add);
+  cmds.appendChild(add);
 }

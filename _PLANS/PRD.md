@@ -52,7 +52,11 @@ whole product is the UX of appearing and disappearing.
       amber pulsing while any tab is producing output) and terminal count
 - [x] Mini box draggable to any screen edge; snaps to nearest edge and
       remembers its spot
-- [x] Click mini box → expands to quick view or full popup (configurable)
+- [x] Click mini box → expands centered on screen, as quick view or full
+      popup (configurable)
+- [x] Hover mini box → peek: quick view appears anchored at the icon without
+      stealing focus; slides back to mini ~0.6 s after the mouse leaves;
+      clicking or typing promotes it to a normal sticky window
 - [x] Auto-hide: when not pinned, mouse away + no typing for N seconds →
       collapse to mini. Hovering, typing, or focus keeps it open
 - [x] Pin button disables auto-hide
@@ -100,7 +104,10 @@ whole product is the UX of appearing and disappearing.
   handles split UTF-8 sequences internally.
 - Window states are implemented by resizing/repositioning the single native
   window; content crossfades via CSS during the switch.
-- Auto-hide is a 400 ms poll comparing `lastActivity` against the configured
-  delay, gated on pin/palette/settings/drag state.
+- Auto-hide is a 400 ms poll that reads the OS cursor position
+  (`cursorPosition()`) and compares it against the window rect —
+  mouseleave/focus DOM events proved unreliable in WKWebView. Gated on
+  pin/palette/settings/drag state; hover-peek uses a short 600 ms delay and
+  bypasses the gates.
 - Inactive terminals stay mounted with `visibility: hidden` (xterm needs
   non-zero dimensions to initialize correctly).

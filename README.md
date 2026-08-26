@@ -37,8 +37,8 @@ you want it to stay put.
 - 🗂️ **Tabs** — `⌘T` new, `⌘W` close, `⌘1–9` switch, **right-click to rename**, auto-titles from the shell, activity dots on busy background tabs
 - ⚡ **Quick commands** — `⌘K` palette with your AI CLIs (`claude`, `codex`, `gemini` by default, fully editable). Click to run; `⌘`-click to run in a new tab
 - 🖼️ **Drag & drop** — drop images, files, or folders onto the terminal and the shell-quoted path lands at your cursor (ideal for handing screenshots to Claude Code)
-- 📌 **Mini mode** — draggable to any screen edge, snaps and remembers its spot, shows live status (amber pulse = output streaming) and open-terminal count
-- ⚙️ **Settings** — auto-hide toggle + delay, default expand view (quick/full), always-on-top, font size, quick-command editor. Everything persists
+- 📌 **Mini mode** — draggable to any screen edge, snaps and remembers its spot, shows live status (amber pulse = output streaming) and open-terminal count. **Hover it to peek** at a quick view without stealing focus (click or type to keep it); **click it** to open the terminal centered on screen
+- ⚙️ **Settings** — a clean centered modal: auto-hide toggle + delay, hover-peek toggle, default expand view (quick/full), always-on-top, font size, quick-command editor. Everything persists
 - 🌘 **Dark, minimal design** — no title bar, rounded transparent window, 100 ms fade/scale animations
 
 ## Keyboard shortcuts
