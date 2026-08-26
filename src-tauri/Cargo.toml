@@ -1,6 +1,6 @@
 [package]
 name = "commandpanel"
-version = "0.2.0"
+version = "0.2.1"
 description = "A minimal, always-on-top terminal panel for AI CLIs"
 authors = ["Wynter Jones"]
 edition = "2021"

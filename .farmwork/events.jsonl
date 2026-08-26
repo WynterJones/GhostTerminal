@@ -437,3 +437,7 @@
 {"ts":1787760876000,"event":"PreToolUse","tool":"Bash","session":"22fa24e3-2448-4ceb-aa0b-4b05b45481f3"}
 {"ts":1787760877000,"event":"PostToolUse","tool":"Bash","session":"22fa24e3-2448-4ceb-aa0b-4b05b45481f3"}
 {"ts":1787760881000,"event":"PreToolUse","tool":"Bash","session":"22fa24e3-2448-4ceb-aa0b-4b05b45481f3"}
+{"ts":1787760883000,"event":"PostToolUse","tool":"Bash","session":"22fa24e3-2448-4ceb-aa0b-4b05b45481f3"}
+{"ts":1787783715000,"event":"PreToolUse","tool":"Bash","session":"22fa24e3-2448-4ceb-aa0b-4b05b45481f3"}
+{"ts":1787783715000,"event":"PostToolUse","tool":"Bash","session":"22fa24e3-2448-4ceb-aa0b-4b05b45481f3"}
+{"ts":1787783718000,"event":"PreToolUse","tool":"Bash","session":"22fa24e3-2448-4ceb-aa0b-4b05b45481f3"}
