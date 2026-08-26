@@ -3,27 +3,25 @@ import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
 export type QuickCmd = { label: string; cmd: string };
+export type SavedTab = { title: string | null; color: string | null };
 
 export type Settings = {
   pinned: boolean;
   autoHide: boolean;
   hideDelay: number; // ms
-  hoverPeek: boolean;
-  defaultView: "quick" | "full";
   alwaysOnTop: boolean;
   fontSize: number;
   quickCmds: QuickCmd[];
   miniPos: { x: number; y: number } | null;
   fullSize: { w: number; h: number };
   quickSize: { w: number; h: number };
+  tabs: SavedTab[];
 };
 
 const DEFAULTS: Settings = {
   pinned: false,
   autoHide: true,
   hideDelay: 1500,
-  hoverPeek: true,
-  defaultView: "quick",
   alwaysOnTop: true,
   fontSize: 13,
   quickCmds: [
@@ -34,6 +32,7 @@ const DEFAULTS: Settings = {
   miniPos: null,
   fullSize: { w: 1000, h: 660 },
   quickSize: { w: 560, h: 400 },
+  tabs: [],
 };
 
 const KEY = "commandpanel.settings";
@@ -81,27 +80,6 @@ function toggle(value: boolean, onChange: (b: boolean) => void): HTMLElement {
   };
   wrap.append(input, el("span", "knob"));
   return wrap;
-}
-
-function segmented(
-  options: [string, string][],
-  value: string,
-  onChange: (v: string) => void,
-): HTMLElement {
-  const seg = el("div", "seg");
-  const btns: HTMLButtonElement[] = [];
-  for (const [v, label] of options) {
-    const b = el("button", v === value ? "on" : "", label);
-    b.onclick = () => {
-      btns.forEach((x) => x.classList.remove("on"));
-      b.classList.add("on");
-      onChange(v);
-      save();
-    };
-    btns.push(b);
-    seg.appendChild(b);
-  }
-  return seg;
 }
 
 function stepper(
@@ -177,24 +155,6 @@ export function renderSettings(body: HTMLElement, hooks: Hooks): void {
     "Collapse to icon when mouse is away",
   );
   row(behavior, "Hide delay", delayRow());
-  row(
-    behavior,
-    "Peek on hover",
-    toggle(settings.hoverPeek, (b) => (settings.hoverPeek = b)),
-    "Hovering the icon shows a quick view",
-  );
-  row(
-    behavior,
-    "Open from icon as",
-    segmented(
-      [
-        ["quick", "Quick"],
-        ["full", "Large"],
-      ],
-      settings.defaultView,
-      (v) => (settings.defaultView = v as "quick" | "full"),
-    ),
-  );
   row(
     behavior,
     "Always on top",

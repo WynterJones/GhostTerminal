@@ -322,26 +322,6 @@ body:not([data-mode="mini"]) #mini { display: none; }
 .switch input:checked + .knob { background: var(--accent); }
 .switch input:checked + .knob::after { transform: translateX(14px); }
 
-/* segmented control */
-.seg {
-  display: flex; gap: 2px;
-  background: #101014;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 2px;
-  flex-shrink: 0;
-}
-.seg button {
-  border: 0; background: none;
-  color: var(--text-dim);
-  font-size: 12px; font-family: var(--font);
-  padding: 3px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
-}
-.seg button.on { background: var(--surface-hover); color: var(--text); }
-
 /* stepper */
 .stepper {
   display: flex; align-items: center; gap: 2px;

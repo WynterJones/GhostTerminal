@@ -34,6 +34,12 @@ function active(): TermSession | undefined {
   return sessions.find((s) => s.id === activeId);
 }
 
+// persist tab set (custom names + colors) so it survives restarts
+function saveTabs(): void {
+  settings.tabs = sessions.map((s) => ({ title: s.renamed ? s.title : null, color: s.color }));
+  save();
+}
+
 function renderTabs(): void {
   tabsEl.innerHTML = "";
   for (const s of sessions) {
@@ -109,6 +115,7 @@ function openTabMenu(e: MouseEvent, s: TermSession, tab: HTMLElement): void {
   none.title = "Default";
   none.onclick = () => {
     s.setColor(null);
+    saveTabs();
     renderTabs();
     closeTabMenu();
   };
@@ -119,6 +126,7 @@ function openTabMenu(e: MouseEvent, s: TermSession, tab: HTMLElement): void {
     b.style.background = c;
     b.onclick = () => {
       s.setColor(c);
+      saveTabs();
       renderTabs();
       closeTabMenu();
     };
@@ -147,6 +155,7 @@ function startRename(tab: HTMLElement, s: TermSession): void {
     if (input.value.trim()) {
       s.title = input.value.trim();
       s.renamed = true;
+      saveTabs();
     }
     renderTabs();
     active()?.focus();
@@ -187,6 +196,7 @@ async function newTab(): Promise<TermSession> {
     () => renderTabs(),
   );
   sessions.push(s);
+  saveTabs();
   selectTab(s.id);
   await s.spawn();
   s.fit();
@@ -198,6 +208,7 @@ function closeTab(id: number, alreadyDead = false): void {
   if (i === -1) return;
   sessions[i].dispose(!alreadyDead);
   sessions.splice(i, 1);
+  saveTabs();
   if (sessions.length === 0) {
     void newTab();
     return;
@@ -267,7 +278,7 @@ function expandTarget(wa: Rect, s: { w: number; h: number }): { x: number; y: nu
   };
 }
 
-// hover peek: anchored next to the mini box so it appears under the cursor
+// anchored next to the mini box so it appears under the cursor
 function anchorTarget(wa: Rect, s: { w: number; h: number }): { x: number; y: number } {
   const anchor = settings.miniPos ?? { x: wa.x + wa.w - MINI - MARGIN, y: wa.y + wa.h / 2 - MINI / 2 };
   const cx = anchor.x + MINI / 2 <= wa.x + wa.w / 2 ? anchor.x : anchor.x + MINI - s.w;
@@ -278,9 +289,7 @@ function anchorTarget(wa: Rect, s: { w: number; h: number }): { x: number; y: nu
   };
 }
 
-let peek = false;
-
-async function setMode(next: Mode, opts?: { peek?: boolean }): Promise<void> {
+async function setMode(next: Mode, opts?: { anchor?: boolean }): Promise<void> {
   if (switching || next === mode) return;
   switching = true;
   bump();
@@ -290,7 +299,6 @@ async function setMode(next: Mode, opts?: { peek?: boolean }): Promise<void> {
   const wa = await workArea();
   ignoreMove = true;
   if (next === "mini") {
-    peek = false;
     settingsEl.hidden = true;
     paletteEl.hidden = true;
     const p = miniTarget(wa);
@@ -301,14 +309,13 @@ async function setMode(next: Mode, opts?: { peek?: boolean }): Promise<void> {
     await win.setPosition(new LogicalPosition(p.x, p.y));
     await win.setAlwaysOnTop(true);
   } else {
-    peek = !!opts?.peek;
     const size = next === "full" ? settings.fullSize : settings.quickSize;
-    const p = peek ? anchorTarget(wa, size) : expandTarget(wa, size);
+    const p = opts?.anchor ? anchorTarget(wa, size) : expandTarget(wa, size);
     await win.setSize(new LogicalSize(size.w, size.h));
     await win.setPosition(new LogicalPosition(p.x, p.y));
     await win.setResizable(true);
-    await win.setAlwaysOnTop(peek ? true : settings.alwaysOnTop);
-    if (!peek) await win.setFocus();
+    await win.setAlwaysOnTop(settings.alwaysOnTop);
+    await win.setFocus();
   }
 
   mode = next;
@@ -320,8 +327,9 @@ async function setMode(next: Mode, opts?: { peek?: boolean }): Promise<void> {
   switching = false;
 
   if (next !== "mini") {
+    lastActivity = Date.now() + 5000; // grace: no auto-hide for 5s after opening
     active()?.fit();
-    if (!peek) active()?.focus();
+    active()?.focus();
   }
 }
 
@@ -365,19 +373,11 @@ void win.onMoved(() => {
   }, 250);
 });
 
-// mini box: click opens centered, hover peeks, drag moves
+// mini box: click opens anchored next to it, drag moves
 let downAt: { x: number; y: number } | null = null;
 let dragged = false;
-let hoverTimer: number | undefined;
 
-miniEl.addEventListener("mouseenter", () => {
-  if (!settings.hoverPeek) return;
-  clearTimeout(hoverTimer);
-  hoverTimer = window.setTimeout(() => void setMode("quick", { peek: true }), 250);
-});
-miniEl.addEventListener("mouseleave", () => clearTimeout(hoverTimer));
 miniEl.addEventListener("mousedown", (e) => {
-  clearTimeout(hoverTimer);
   downAt = { x: e.screenX, y: e.screenY };
   dragged = false;
 });
@@ -389,8 +389,7 @@ miniEl.addEventListener("mousemove", (e) => {
   }
 });
 miniEl.addEventListener("mouseup", () => {
-  clearTimeout(hoverTimer);
-  if (downAt && !dragged) void setMode(settings.defaultView);
+  if (downAt && !dragged) void setMode("quick", { anchor: true });
   downAt = null;
 });
 
@@ -399,27 +398,9 @@ miniEl.addEventListener("mouseup", () => {
 let lastActivity = Date.now() + 3000; // grace period after launch
 const bump = () => (lastActivity = Date.now());
 
-// clicking or typing in a hover-peeked window makes it a normal sticky window
-function promotePeek(): void {
-  if (!peek) return;
-  peek = false;
-  void win.setAlwaysOnTop(settings.alwaysOnTop);
-  void win.setFocus();
-}
-
 document.addEventListener("mousemove", bump);
-document.addEventListener("mousedown", () => {
-  bump();
-  promotePeek();
-});
-document.addEventListener(
-  "keydown",
-  () => {
-    bump();
-    promotePeek();
-  },
-  true,
-);
+document.addEventListener("mousedown", bump);
+document.addEventListener("keydown", bump, true);
 
 // Poll the OS cursor position instead of relying on mouseleave/focus events,
 // which are unreliable in WKWebView.
@@ -431,20 +412,12 @@ async function mouseIsOver(): Promise<boolean> {
 let ticking = false;
 setInterval(() => {
   if (ticking || mode === "mini" || switching) return;
-  if (
-    !peek &&
-    (settings.pinned ||
-      !settings.autoHide ||
-      !settingsEl.hidden ||
-      !paletteEl.hidden ||
-      !dropEl.hidden)
-  )
-    return;
+  if (settings.pinned || !settings.autoHide || !settingsEl.hidden || !paletteEl.hidden || !dropEl.hidden) return;
   ticking = true;
   void (async () => {
     try {
       if (await mouseIsOver()) bump();
-      else if (Date.now() - lastActivity > (peek ? 600 : settings.hideDelay)) {
+      else if (Date.now() - lastActivity > settings.hideDelay) {
         await setMode("mini");
       }
     } catch {
@@ -568,7 +541,7 @@ document.addEventListener(
       // shortcuts can't act on a hidden panel; expand first
       if (k === "t" || k === "k" || k === ",") {
         e.preventDefault();
-        void setMode(settings.defaultView);
+        void setMode("quick", { anchor: true });
       }
       return;
     }
@@ -623,4 +596,18 @@ void (async () => {
   }
 })();
 
-void newTab();
+// restore last session's tab set (fresh shells; custom names and colors kept)
+void (async () => {
+  const saved = settings.tabs;
+  if (!saved.length) return void (await newTab());
+  for (const t of saved) {
+    const s = await newTab();
+    if (t.title) {
+      s.title = t.title;
+      s.renamed = true;
+    }
+    if (t.color) s.setColor(t.color);
+  }
+  saveTabs();
+  renderTabs();
+})();
